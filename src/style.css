@@ -1,0 +1,109 @@
+:root {
+	font-family: 'Segoe UI', system-ui, sans-serif;
+	color: #e8eaed;
+	background: #1a1d21;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+}
+
+#app {
+	min-height: 100vh;
+	width: 100%;
+}
+
+.layout {
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+	min-height: 100vh;
+	width: 100%;
+}
+
+.panel {
+	width: 420px;
+	min-width: 320px;
+	flex-shrink: 0;
+	padding: 12px 16px 12px 24px;
+	background: linear-gradient(180deg, #22262c 0%, #1a1d21 100%);
+	border-left: 1px solid #333842;
+	overflow: auto;
+}
+
+.panel h1 {
+	margin: 0 0 4px;
+	font-size: 1.05rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+
+.panel .sub {
+	margin: 0 0 12px;
+	font-size: 0.78rem;
+	color: #8b929e;
+	line-height: 1.4;
+}
+
+#gui-mount {
+	min-height: 200px;
+}
+
+#gui-mount .lil-gui {
+	--background-color: #2a2f36;
+	--widget-color: #3d4450;
+	--focus-color: #5c6bc0;
+	--hover-color: #4a5160;
+	--font-family: inherit;
+	font-size: 12px;
+	width: 100%;
+}
+
+.viewport {
+	flex: 1;
+	position: relative;
+	min-width: 0;
+	min-height: 100vh;
+	height: 100vh;
+	background: #0d0f12;
+}
+
+.viewport canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.hint {
+	margin-top: 14px;
+	font-size: 0.72rem;
+	color: #6d7582;
+	line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+	.layout {
+		flex-direction: column;
+	}
+
+	.panel {
+		width: 100%;
+		min-width: unset;
+		border-left: none;
+		border-top: 1px solid #333842;
+		max-height: 48vh;
+		order: 2;
+	}
+
+	.viewport {
+		order: 1;
+		min-height: 52vh;
+		height: 52vh;
+		flex: none;
+	}
+}

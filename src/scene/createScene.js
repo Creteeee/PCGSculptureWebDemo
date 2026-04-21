@@ -24,6 +24,7 @@ export function createSceneCore(mountEl) {
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	renderer.toneMapping = THREE.ACESFilmicToneMapping;
 	renderer.toneMappingExposure = 1;
+	renderer.outputColorSpace = THREE.SRGBColorSpace;
 	mountEl.appendChild(renderer.domElement);
 
 	const controls = new OrbitControls(camera, renderer.domElement);

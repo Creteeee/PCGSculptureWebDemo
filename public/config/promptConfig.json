@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "notes": "给 system prompt 的可编辑配置。前端会把它拼到 systemPrompt 后面，让模型先读 CONFIG 再按协议输出 JSON。",
+
+  "routing": {
+    "preferUpdateState": true,
+    "renderImageKeywords": ["生成图片", "生图", "效果图", "渲染图", "出图", "参考图"]
+  },
+
+  "renderImage": {
+    "defaultStyle": "realistic",
+    "defaultStrength": 0.65,
+    "promptPrefix": "以当前 3D 视口截图为准。",
+    "antiCarryOver": {
+      "enabled": true,
+      "forbiddenSceneWords": ["沙丘", "沙漠", "雪山", "海边", "樱花"],
+      "rule": "除非用户明确说“沿用上一张/继续刚才/在上一张基础上改”，否则本次 prompt 禁止带入任何历史场景词。"
+    },
+    "negativePromptDefault": ""
+  },
+
+  "updateState": {
+    "relativeChangeRules": {
+      "halfWords": ["减半", "二分之一", "1/2", "50%"]
+    },
+    "colorPresets": {
+      "deepBlue": "#0b2a6f",
+      "gold": "#d6b25e",
+      "warmYellow": "#e0c36a"
+    }
+  }
+}
+

@@ -1,0 +1,62 @@
+{
+  "sculpture": {
+    "length": 8.6,
+    "width": 4.15,
+    "height": 2.2,
+    "noiseType": "voronoi",
+    "noiseAmplitude": 0.905,
+    "noiseFrequency": 1.65,
+    "noiseTiling": 0,
+    "noiseSeed": 0
+  },
+  "material": {
+    "color": "#927c7c",
+    "metalness": 1,
+    "roughness": 0.33,
+    "envMapIntensity": 0.9
+  },
+  "preview": {
+    "mode": "solid"
+  },
+  "light": {
+    "ambientIntensity": 1.9,
+    "dirIntensity": 3.84,
+    "dirX": -7.3,
+    "dirY": 11.4,
+    "dirZ": -20,
+    "shadows": true,
+    "shadowMapSize": 2048
+  },
+  "skybox": {
+    "enabled": true,
+    "background": true,
+    "environment": true,
+    "size": 512,
+    "topColor": "#72a5e3",
+    "bottomColor": "#b9d9ff"
+  },
+  "grass": {
+    "enabled": true,
+    "count": 2000,
+    "radius": 7.5,
+    "crossBlades": true,
+    "bladeHeight": 1.1,
+    "bladeWidth": 0.6,
+    "bladeSize": 0.77,
+    "windStrength": 0.31
+  },
+  "projection": {
+    "enabled": false,
+    "opacity": 0.35,
+    "tiling": 1.5,
+    "textureUrl": "textures/T_Mapping.png"
+  },
+  "perf": {
+    "maxPixelRatio": 2,
+    "interactionPixelRatio": 1
+  },
+  "export": {
+    "format": "glb"
+  }
+}
+

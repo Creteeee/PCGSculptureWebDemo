@@ -58,7 +58,7 @@ export function createLightingRig(scene, extension = { hooks: [] }) {
 /**
  * @param {LightingContext} ctx
  * @param {{ intensity: number }} a
- * @param {{ intensity: number, x: number, y: number, z: number }} dir
+ * @param {{ intensity: number, x: number, y: number, z: number, shadowMapSize?: number }} dir
  * @param {boolean} shadowsEnabled
  */
 export function applyLightingParams(ctx, a, dir, shadowsEnabled) {
@@ -67,4 +67,11 @@ export function applyLightingParams(ctx, a, dir, shadowsEnabled) {
 	ctx.directional.position.set(dir.x, dir.y, dir.z);
 	ctx.directional.target.position.set(0, 0, 0);
 	ctx.directional.castShadow = shadowsEnabled;
+	if (typeof dir.shadowMapSize === 'number' && Number.isFinite(dir.shadowMapSize)) {
+		const size = Math.max(128, Math.min(4096, Math.floor(dir.shadowMapSize)));
+		if (ctx.directional.shadow.mapSize.x !== size || ctx.directional.shadow.mapSize.y !== size) {
+			ctx.directional.shadow.mapSize.set(size, size);
+			ctx.directional.shadow.needsUpdate = true;
+		}
+	}
 }

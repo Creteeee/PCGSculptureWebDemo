@@ -255,6 +255,87 @@ body {
 	flex-direction: column;
 }
 
+.lightbox__inner--split {
+	width: min(1180px, 96vw);
+	flex-direction: row;
+}
+
+.lightbox__media {
+	flex: 1.4;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	background: #0b0e12;
+}
+
+.lightbox__side {
+	flex: 1;
+	min-width: 280px;
+	max-width: 420px;
+	border-left: 1px solid rgba(255, 255, 255, 0.08);
+	background: #0f1216;
+	display: flex;
+	flex-direction: column;
+}
+
+.sideTabs {
+	display: inline-flex;
+	gap: 0;
+	background: #14171c;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sideTabs button {
+	appearance: none;
+	border: none;
+	background: transparent;
+	color: #aeb6c3;
+	font: inherit;
+	padding: 10px 12px;
+	cursor: pointer;
+}
+
+.sideTabs button[aria-selected="true"] {
+	background: rgba(92, 107, 192, 0.22);
+	color: #e8eaed;
+}
+
+.sidePanel {
+	padding: 12px;
+	display: none;
+	flex: 1;
+	overflow: auto;
+}
+
+.sidePanel--open {
+	display: block;
+}
+
+.kv {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.kv__label {
+	font-size: 0.72rem;
+	color: #8b929e;
+}
+
+.kv__value {
+	font-size: 0.82rem;
+	color: #e8eaed;
+	white-space: pre-wrap;
+	line-height: 1.4;
+}
+
+.kv__row {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-top: 8px;
+}
+
 .lightbox__img {
 	width: 100%;
 	height: auto;
@@ -442,6 +523,15 @@ body {
 }
 
 @media (max-width: 720px) {
+	/* Prefer dynamic viewport units on mobile browsers */
+	html,
+	body,
+	#app,
+	.layout {
+		height: 100dvh;
+		min-height: 100dvh;
+	}
+
 	.layout {
 		flex-direction: column;
 	}
@@ -451,15 +541,40 @@ body {
 		min-width: unset;
 		border-left: none;
 		border-top: 1px solid #333842;
-		max-height: 48vh;
+		max-height: 48dvh;
 		order: 2;
 		height: auto;
+		padding: 10px 12px calc(10px + env(safe-area-inset-bottom)) 12px;
 	}
 
 	.viewport {
 		order: 1;
-		min-height: 52vh;
-		height: 52vh;
+		min-height: 52dvh;
+		height: 52dvh;
 		flex: none;
+	}
+
+	.lightbox {
+		padding: 10px;
+	}
+
+	.lightbox__inner {
+		width: 100%;
+		max-height: 94dvh;
+	}
+
+	.lightbox__inner--split {
+		flex-direction: column;
+		width: 100%;
+	}
+
+	.lightbox__side {
+		max-width: unset;
+		border-left: none;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.lightbox__img {
+		max-height: 55dvh;
 	}
 }

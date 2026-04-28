@@ -135,6 +135,8 @@ export function mountChatPanel(container, ctx = {}) {
 
 			const type = data?.type;
 			const message = typeof data?.message === 'string' ? data.message : '';
+			const posterPrompt = typeof data?.poster_prompt === 'string' ? data.poster_prompt : '';
+			const tweet = typeof data?.tweet === 'string' ? data.tweet : '';
 
 			if (message) {
 				messages.push({ role: 'assistant', content: message });
@@ -179,7 +181,14 @@ export function mountChatPanel(container, ctx = {}) {
 
 					const url = imgResp?.url || imgResp?.data?.url;
 					if (url) {
-						const item = { url, prompt: data.render_request.prompt, createdAt: Date.now() };
+						const item = {
+							url,
+							prompt: data.render_request.prompt,
+							createdAt: Date.now(),
+							kind,
+							posterPrompt: posterPrompt || (kind === 'poster' ? data.render_request.prompt : ''),
+							tweet: tweet || '',
+						};
 						ctx.onRenderSaved?.(item);
 						appendMsg('assistant', '效果图已生成并保存到历史列表。');
 					} else {

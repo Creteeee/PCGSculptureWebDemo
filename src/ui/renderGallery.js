@@ -43,29 +43,85 @@ export function mountRenderGallery(container, { onClear } = {}) {
   lightbox.setAttribute('aria-hidden', 'true');
   lightbox.tabIndex = -1;
 
-  const lbInner = el('div', 'lightbox__inner');
+  const lbInner = el('div', 'lightbox__inner lightbox__inner--split');
+  const lbMedia = el('div', 'lightbox__media');
   const lbImg = /** @type {HTMLImageElement} */ (el('img', 'lightbox__img'));
-  const lbMeta = el('div', 'lightbox__meta');
-  const lbPrompt = el('div', 'lightbox__prompt');
-  const lbTime = el('div', 'lightbox__time');
-  const lbActions = el('div', 'lightbox__actions');
+
+  const lbSide = el('div', 'lightbox__side');
+  const tabs = el('div', 'sideTabs');
+  const tabInfo = /** @type {HTMLButtonElement} */ (el('button', '', '信息'));
+  const tabPoster = /** @type {HTMLButtonElement} */ (el('button', '', '海报&推文'));
+  tabInfo.type = 'button';
+  tabPoster.type = 'button';
+  tabInfo.setAttribute('aria-selected', 'true');
+  tabPoster.setAttribute('aria-selected', 'false');
+  tabs.appendChild(tabInfo);
+  tabs.appendChild(tabPoster);
+
+  const panelInfo = el('div', 'sidePanel sidePanel--open');
+  const panelPoster = el('div', 'sidePanel');
+
+  const infoWrap = el('div', 'kv');
+  const infoPromptLabel = el('div', 'kv__label', '提示词');
+  const infoPrompt = el('div', 'kv__value');
+  const infoTimeLabel = el('div', 'kv__label', '时间');
+  const infoTime = el('div', 'kv__value');
+  const infoActions = el('div', 'kv__row');
+
+  const posterWrap = el('div', 'kv');
+  const posterHint = el(
+    'div',
+    'kv__label',
+    '在对话里说“生成海报/推文/小红书文案”，系统会基于室内艺术馆效果图生成海报指令与推文内容。',
+  );
+  const posterPromptLabel = el('div', 'kv__label', '海报生图指令（含排版与字号）');
+  const posterPrompt = el('div', 'kv__value');
+  const posterPromptActions = el('div', 'kv__row');
+  const tweetLabel = el('div', 'kv__label', '推文/小红书文案（含标题与 emoji）');
+  const tweet = el('div', 'kv__value');
+  const tweetActions = el('div', 'kv__row');
+
   const lbOpen = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '新窗口打开'));
   const lbCopy = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '复制链接'));
   const lbClose = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '关闭'));
+  const copyPosterPromptBtn = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '复制海报指令'));
+  const copyTweetBtn = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '复制推文'));
 
   lbOpen.type = 'button';
   lbCopy.type = 'button';
   lbClose.type = 'button';
+  copyPosterPromptBtn.type = 'button';
+  copyTweetBtn.type = 'button';
 
-  lbActions.appendChild(lbOpen);
-  lbActions.appendChild(lbCopy);
-  lbActions.appendChild(lbClose);
-  lbMeta.appendChild(lbPrompt);
-  lbMeta.appendChild(lbTime);
-  lbMeta.appendChild(lbActions);
+  infoActions.appendChild(lbOpen);
+  infoActions.appendChild(lbCopy);
+  infoActions.appendChild(lbClose);
 
-  lbInner.appendChild(lbImg);
-  lbInner.appendChild(lbMeta);
+  infoWrap.appendChild(infoPromptLabel);
+  infoWrap.appendChild(infoPrompt);
+  infoWrap.appendChild(infoTimeLabel);
+  infoWrap.appendChild(infoTime);
+  infoWrap.appendChild(infoActions);
+  panelInfo.appendChild(infoWrap);
+
+  posterPromptActions.appendChild(copyPosterPromptBtn);
+  tweetActions.appendChild(copyTweetBtn);
+  posterWrap.appendChild(posterHint);
+  posterWrap.appendChild(posterPromptLabel);
+  posterWrap.appendChild(posterPrompt);
+  posterWrap.appendChild(posterPromptActions);
+  posterWrap.appendChild(tweetLabel);
+  posterWrap.appendChild(tweet);
+  posterWrap.appendChild(tweetActions);
+  panelPoster.appendChild(posterWrap);
+
+  lbSide.appendChild(tabs);
+  lbSide.appendChild(panelInfo);
+  lbSide.appendChild(panelPoster);
+
+  lbMedia.appendChild(lbImg);
+  lbInner.appendChild(lbMedia);
+  lbInner.appendChild(lbSide);
   lightbox.appendChild(lbInner);
   const header = el('div', 'gallery__header');
   header.appendChild(el('div', 'gallery__title', '效果图（历史）'));
@@ -140,18 +196,32 @@ export function mountRenderGallery(container, { onClear } = {}) {
   container.appendChild(root);
   container.appendChild(lightbox);
 
-  /** @type {{ url: string, prompt?: string, createdAt?: number } | null} */
+  /** @type {{ url: string, prompt?: string, createdAt?: number, posterPrompt?: string, tweet?: string, kind?: string } | null} */
   let opened = null;
+
+  function setTab(which) {
+    const isInfo = which === 'info';
+    tabInfo.setAttribute('aria-selected', String(isInfo));
+    tabPoster.setAttribute('aria-selected', String(!isInfo));
+    panelInfo.classList.toggle('sidePanel--open', isInfo);
+    panelPoster.classList.toggle('sidePanel--open', !isInfo);
+  }
+
+  tabInfo.addEventListener('click', () => setTab('info'));
+  tabPoster.addEventListener('click', () => setTab('poster'));
 
   function openLightbox(it) {
     if (!it?.url) return;
     opened = it;
     lbImg.src = it.url;
     lbImg.alt = it.prompt || 'render';
-    lbPrompt.textContent = it.prompt || '(无提示词)';
-    lbTime.textContent = new Date(it.createdAt || Date.now()).toLocaleString();
+    infoPrompt.textContent = it.prompt || '(无提示词)';
+    infoTime.textContent = new Date(it.createdAt || Date.now()).toLocaleString();
+    posterPrompt.textContent = it.posterPrompt || '(暂无：请在对话中请求生成海报)';
+    tweet.textContent = it.tweet || '(暂无：请在对话中请求生成推文/小红书文案)';
     lightbox.classList.add('lightbox--open');
     lightbox.setAttribute('aria-hidden', 'false');
+    setTab(it.posterPrompt || it.tweet ? 'poster' : 'info');
     // focus for ESC
     try {
       lightbox.focus();
@@ -165,6 +235,8 @@ export function mountRenderGallery(container, { onClear } = {}) {
     lightbox.classList.remove('lightbox--open');
     lightbox.setAttribute('aria-hidden', 'true');
     lbImg.src = '';
+    posterPrompt.textContent = '';
+    tweet.textContent = '';
   }
 
   lightbox.addEventListener('click', (e) => {
@@ -185,6 +257,28 @@ export function mountRenderGallery(container, { onClear } = {}) {
       await navigator.clipboard.writeText(opened.url);
       lbCopy.textContent = '已复制';
       window.setTimeout(() => (lbCopy.textContent = '复制链接'), 900);
+    } catch {
+      // ignore
+    }
+  });
+
+  copyPosterPromptBtn.addEventListener('click', async () => {
+    if (!opened?.posterPrompt) return;
+    try {
+      await navigator.clipboard.writeText(opened.posterPrompt);
+      copyPosterPromptBtn.textContent = '已复制';
+      window.setTimeout(() => (copyPosterPromptBtn.textContent = '复制海报指令'), 900);
+    } catch {
+      // ignore
+    }
+  });
+
+  copyTweetBtn.addEventListener('click', async () => {
+    if (!opened?.tweet) return;
+    try {
+      await navigator.clipboard.writeText(opened.tweet);
+      copyTweetBtn.textContent = '已复制';
+      window.setTimeout(() => (copyTweetBtn.textContent = '复制推文'), 900);
     } catch {
       // ignore
     }
@@ -228,8 +322,16 @@ export function mountRenderGallery(container, { onClear } = {}) {
         }
       });
 
+      const posterBtn = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '海报&推文'));
+      posterBtn.type = 'button';
+      posterBtn.addEventListener('click', () => {
+        openLightbox(it);
+        setTab('poster');
+      });
+
       actions.appendChild(openBtn);
       actions.appendChild(copyBtn);
+      actions.appendChild(posterBtn);
       meta.appendChild(actions);
 
       card.appendChild(meta);

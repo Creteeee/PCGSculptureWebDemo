@@ -98,6 +98,16 @@ async function deepseekChat({ systemPrompt, messages, apiKey }) {
       '再次强调：你必须且只能输出一个 JSON 对象（不要输出 Markdown/解释/代码块/多段文本）。' +
       '若需要生图，返回 type="render_image" + render_request；若需改参数，返回 type="update_state" + state_patch。',
   });
+
+  // Hard constraints enforced server-side (avoid prompt drift / client tampering)
+  finalMessages.push({
+    role: 'system',
+    content:
+      '硬限制：效果图只能是室内展示场景（艺术馆/博物馆/画廊/高级写字楼大堂/室内展厅）。' +
+      '若用户要求室外/奇异场景（公园/沙漠/火星/海边/雪山等），必须返回 type="chat" 并说明无法生成此类景观，建议改为室内艺术馆等。' +
+      '任何 render_image 的 prompt/negative_prompt 都必须明确禁止地面网格/辅助网格/坐标网格（no ground grid）。' +
+      '若用户提到海报/推文/小红书文案/文案/排版/字体等关键词，必须输出 type="render_image" 且 render_request.kind="poster"，并同时输出 poster_prompt(含字号层级) 与 tweet(含标题与 emoji)。',
+  });
   for (const m of sliced) finalMessages.push(m);
 
   const resp = await fetch('https://api.deepseek.com/chat/completions', {
@@ -153,6 +163,24 @@ async function handleChat(req, res) {
       res.statusCode = 200;
       res.body = { type: 'chat', message: obj.message || '（无有效 type）' };
       return;
+    }
+
+    // Post-process: enforce "no ground grid" even if model forgets.
+    if (type === 'render_image' && obj?.render_request && typeof obj.render_request === 'object') {
+      const rr = obj.render_request;
+      if (typeof rr.prompt === 'string' && rr.prompt.trim()) {
+        const p = rr.prompt.trim();
+        if (!/no\s+ground\s+grid|地面网格|辅助网格|坐标网格/i.test(p)) {
+          rr.prompt = `${p}；禁止地面网格/辅助网格/坐标网格（no ground grid）`;
+        }
+      }
+      if (typeof rr.negative_prompt === 'string') {
+        const n = rr.negative_prompt;
+        if (!/grid|网格/i.test(n)) rr.negative_prompt = `${n}, ground grid, floor grid, grid lines`;
+      } else {
+        rr.negative_prompt = 'ground grid, floor grid, grid lines, wireframe floor, coordinate grid';
+      }
+      obj.render_request = rr;
     }
 
     res.statusCode = 200;

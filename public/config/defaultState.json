@@ -10,7 +10,7 @@
     "noiseSeed": 0
   },
   "material": {
-    "color": "#927c7c",
+    "color": "#bcbbff",
     "metalness": 1,
     "roughness": 0.33,
     "envMapIntensity": 0.9
@@ -34,7 +34,7 @@
     "hdriUrl": "textures/sepulchral_chapel_rotunda_2k.exr",
     "size": 512,
     "topColor": "#72a5e3",
-    "bottomColor": "#b9d9ff"
+    "bottomColor": "#bcbbff"
   },
   "grass": {
     "enabled": false,

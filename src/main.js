@@ -23,6 +23,7 @@ import { mountChatPanel } from './ui/chatPanel.js';
 import { mountRenderGallery } from './ui/renderGallery.js';
 import { loadSystemPrompt } from './config/loadSystemPrompt.js';
 import { pushRenderHistory } from './ui/renderGallery.js';
+import { CHAT_ENDPOINT_BASE, normalizeBaseUrl } from './config/chatEndpoint.js';
 
 const projectionHooks = [];
 
@@ -236,9 +237,7 @@ function setProjectionTexture(urlLike) {
 			// If cross-origin/CORS fails, keep previous texture so projection doesn't "disappear".
 			// (Preview <img> may still load even when WebGL can't use it.)
 			try {
-				const endpoint = (window.localStorage.getItem('pcg_chat_endpoint') || '')
-					.trim()
-					.replace(/\/+$/, '');
+				const endpoint = normalizeBaseUrl(CHAT_ENDPOINT_BASE);
 				if (!endpoint) return;
 				const token = window.localStorage.getItem('pcg_chat_token') || '';
 				const headers = { 'Content-Type': 'application/json' };

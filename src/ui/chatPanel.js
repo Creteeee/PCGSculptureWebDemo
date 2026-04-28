@@ -1,15 +1,7 @@
-const LS_ENDPOINT = 'pcg_chat_endpoint';
 const LS_TOKEN = 'pcg_chat_token';
 const IMAGEX_TEMPLATE = 'tplv-97hsy4j2xz-pcg存图';
 
-function getEndpoint() {
-	return window.localStorage.getItem(LS_ENDPOINT) || '';
-}
-
-function setEndpoint(v) {
-	if (!v) return;
-	window.localStorage.setItem(LS_ENDPOINT, v);
-}
+import { CHAT_ENDPOINT_BASE, normalizeBaseUrl } from '../config/chatEndpoint.js';
 
 function getToken() {
 	return window.localStorage.getItem(LS_TOKEN) || '';
@@ -29,13 +21,6 @@ function el(tag, className, text) {
 function formatError(err) {
 	if (err instanceof Error) return err.message;
 	return String(err);
-}
-
-function normalizeBaseUrl(endpoint) {
-	let base = (endpoint || '').trim();
-	if (!base) return '';
-	base = base.replace(/\/+$/, '');
-	return base;
 }
 
 async function postJson(url, body, { token, signal } = {}) {
@@ -77,17 +62,6 @@ export function mountChatPanel(container, ctx = {}) {
 	const header = el('div', 'chat__header');
 	header.appendChild(el('div', 'chat__title', '对话模式'));
 
-	const keyRow = el('div', 'chat__keyRow');
-	const endpointInput = /** @type {HTMLInputElement} */ (el('input', 'chat__keyInput'));
-	endpointInput.type = 'text';
-	endpointInput.placeholder = '粘贴云函数 URL（例如 https://xxxx.ap-guangzhou.scf.tencentcs.com/）';
-	endpointInput.value = getEndpoint();
-	const saveEndpointBtn = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '保存地址'));
-	saveEndpointBtn.type = 'button';
-	saveEndpointBtn.addEventListener('click', () => setEndpoint(endpointInput.value.trim()));
-	keyRow.appendChild(endpointInput);
-	keyRow.appendChild(saveEndpointBtn);
-
 	const tokenRow = el('div', 'chat__keyRow');
 	const tokenInput = /** @type {HTMLInputElement} */ (el('input', 'chat__keyInput'));
 	tokenInput.type = 'password';
@@ -99,7 +73,6 @@ export function mountChatPanel(container, ctx = {}) {
 	tokenRow.appendChild(tokenInput);
 	tokenRow.appendChild(saveTokenBtn);
 
-	header.appendChild(keyRow);
 	header.appendChild(tokenRow);
 	root.appendChild(header);
 
@@ -132,9 +105,9 @@ export function mountChatPanel(container, ctx = {}) {
 	let aborter = /** @type {AbortController | null} */ (null);
 
 	async function onSend(text) {
-		const base = normalizeBaseUrl(getEndpoint());
+		const base = normalizeBaseUrl(CHAT_ENDPOINT_BASE);
 		if (!base) {
-			appendMsg('assistant', '请先在上方粘贴并保存云函数 URL。');
+			appendMsg('assistant', '云函数地址未配置。');
 			return;
 		}
 		const token = getToken();

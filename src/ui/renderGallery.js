@@ -1,3 +1,4 @@
+import { CHAT_ENDPOINT_BASE, normalizeBaseUrl } from '../config/chatEndpoint.js';
 const LS_KEY = 'pcg_render_history_v1';
 
 function el(tag, className, text) {
@@ -75,7 +76,7 @@ export function mountRenderGallery(container, { onClear } = {}) {
     const items = loadRenderHistory();
     if (!items.length) return;
 
-    const endpoint = (window.localStorage.getItem('pcg_chat_endpoint') || '').trim().replace(/\/+$/, '');
+    const endpoint = normalizeBaseUrl(CHAT_ENDPOINT_BASE);
     const token = window.localStorage.getItem('pcg_chat_token') || '';
     if (!endpoint) {
       migrateBtn.textContent = '请先配置云函数地址';

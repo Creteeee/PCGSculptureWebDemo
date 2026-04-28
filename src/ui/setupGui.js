@@ -67,21 +67,7 @@ export function setupGui(container, state, callbacks) {
 	}
 
 	if (state.grass) {
-		const fGrass = gui.addFolder('草坪');
-		fGrass.add(state.grass, 'enabled').name('启用').onChange(() => callbacks.onGrassChange?.());
-		fGrass.add(state.grass, 'count', 0, 6000, 50).name('数量').onChange(() => callbacks.onGrassChange?.());
-		fGrass.add(state.grass, 'radius', 1, 30, 0.1).name('半径').onChange(() => callbacks.onGrassChange?.());
-		fGrass.add(state.grass, 'crossBlades').name('十字草(近景)').onChange(() => callbacks.onGrassChange?.());
-		if (state.grass.bladeHeight !== undefined) {
-			fGrass.add(state.grass, 'bladeHeight', 0.1, 2.5, 0.01).name('长度(高度)').onChange(() => callbacks.onGrassChange?.());
-		}
-		if (state.grass.bladeWidth !== undefined) {
-			fGrass.add(state.grass, 'bladeWidth', 0.05, 0.6, 0.01).name('宽度').onChange(() => callbacks.onGrassChange?.());
-		}
-		if (state.grass.bladeSize !== undefined) {
-			fGrass.add(state.grass, 'bladeSize', 0.25, 3, 0.01).name('大小(等比)').onChange(() => callbacks.onGrassChange?.());
-		}
-		fGrass.add(state.grass, 'windStrength', 0, 0.5, 0.01).name('风力').onChange(() => callbacks.onGrassChange?.());
+		// 草地功能按需求全局关闭：不在 GUI 暴露任何草地参数
 	}
 
 	if (state.projection) {

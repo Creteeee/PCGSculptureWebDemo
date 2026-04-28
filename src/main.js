@@ -12,7 +12,6 @@ import { setupGui } from './ui/setupGui.js';
 import { runProjectionHooks } from './projection/projectionBridge.js';
 import { exportSculpture } from './export/exportModel.js';
 import { applySkybox } from './environment/skybox.js';
-import { createGroundPlane } from './environment/groundPlane.js';
 import { createGrassField } from './vegetation/grassField.js';
 import {
 	applyBaseRendererQuality,
@@ -184,9 +183,6 @@ const { scene, camera, renderer, controls, dispose } = createSceneCore(viewport)
 
 const lighting = createLightingRig(scene, { hooks: projectionHooks });
 
-	const ground = createGroundPlane({ size: 30, y: -1.205, repeat: 6, receiveShadow: true });
-	scene.add(ground.mesh);
-
 const sculpture = createSculptureMesh(168, 84);
 scene.add(sculpture);
 
@@ -309,6 +305,8 @@ let skyboxHandles = applySkybox(renderer, scene, state.skybox);
 let grass = null;
 let lastGrassKey = '';
 function ensureGrass() {
+	// 草地功能按需求全局关闭（老师不喜欢）：无论 state 如何都不创建草地
+	if (state.grass) state.grass.enabled = false;
 	if (!state.grass.enabled) {
 		if (grass) {
 			scene.remove(grass.mesh);
@@ -395,8 +393,8 @@ function syncLight() {
 }
 
 function syncSkybox() {
+	// NOTE: env/hdri textures are cached inside skybox.js; do not dispose them here.
 	if (skyboxHandles?.cube) skyboxHandles.cube.dispose?.();
-	if (skyboxHandles?.env) skyboxHandles.env.dispose?.();
 	skyboxHandles = applySkybox(renderer, scene, state.skybox);
 }
 
@@ -463,11 +461,9 @@ animate();
 window.addEventListener('beforeunload', () => {
 	detachPerfGuard?.();
 	if (grass) grass.dispose();
-	ground.dispose?.();
 	projectionMat.dispose();
 	chatHandle?.dispose?.();
 	galleryHandle?.dispose?.();
 	if (skyboxHandles?.cube) skyboxHandles.cube.dispose?.();
-	if (skyboxHandles?.env) skyboxHandles.env.dispose?.();
 	dispose();
 });

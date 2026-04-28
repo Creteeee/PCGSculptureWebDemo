@@ -31,12 +31,13 @@
     "enabled": true,
     "background": true,
     "environment": true,
+    "hdriUrl": "textures/sepulchral_chapel_rotunda_2k.exr",
     "size": 512,
     "topColor": "#72a5e3",
     "bottomColor": "#b9d9ff"
   },
   "grass": {
-    "enabled": true,
+    "enabled": false,
     "count": 2000,
     "radius": 7.5,
     "crossBlades": true,

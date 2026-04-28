@@ -14,7 +14,7 @@ export function getDefaultQualityProfile() {
 		shadowsEnabled: mobile ? false : true,
 		shadowMapSize: mobile ? 1024 : 2048,
 		grass: {
-			enabled: true,
+			enabled: false,
 			// keep a sane default ceiling
 			count: mobile ? 800 : 1800,
 			radius: mobile ? 7.5 : 10,

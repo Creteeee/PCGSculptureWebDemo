@@ -1,4 +1,16 @@
 import * as THREE from 'three';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+
+let hdriApplyToken = 0;
+let cachedHdri = /** @type {Map<string, { hdr: THREE.Texture, env: THREE.Texture }>} */ (new Map());
+
+function resolveUrl(urlLike) {
+	const base = import.meta.env.BASE_URL || '/';
+	const s = String(urlLike || '').trim();
+	if (!s) return '';
+	if (/^https?:\/\//i.test(s)) return s;
+	return `${base}${s.replace(/^\/+/, '')}`;
+}
 
 function createFaceCanvas(size, topColor, bottomColor, noiseStrength = 0.03) {
 	const canvas = document.createElement('canvas');
@@ -68,6 +80,7 @@ export function applySkybox(renderer, scene, options = {}) {
 		background = true,
 		environment = true,
 		intensity = 1,
+		hdriUrl = '',
 		size = 512,
 		topColor = '#5aa7ff',
 		bottomColor = '#e9f5ff',
@@ -76,18 +89,63 @@ export function applySkybox(renderer, scene, options = {}) {
 	if (!enabled) {
 		if (scene.background && scene.background.isTexture) scene.background.dispose?.();
 		scene.background = null;
+		scene.environment = null;
 		return { cube: null, env: null };
 	}
 
-	const cube = createProceduralSkyCubeTexture({ size, topColor, bottomColor });
-	if (background) scene.background = cube;
+	const token = ++hdriApplyToken;
+	const url = resolveUrl(hdriUrl);
 
+	// Fallback (procedural) while HDRI is absent or loading
+	let cube = null;
 	let env = null;
-	if (environment) {
-		const pmrem = new THREE.PMREMGenerator(renderer);
-		env = pmrem.fromCubemap(cube).texture;
-		pmrem.dispose();
-		scene.environment = env;
+
+	if (!url) {
+		cube = createProceduralSkyCubeTexture({ size, topColor, bottomColor });
+		if (background) scene.background = cube;
+		if (environment) {
+			const pmrem = new THREE.PMREMGenerator(renderer);
+			env = pmrem.fromCubemap(cube).texture;
+			pmrem.dispose();
+			scene.environment = env;
+		}
+	} else {
+		// Best-effort: use cache immediately if present
+		const cached = cachedHdri.get(url);
+		if (cached) {
+			if (background) scene.background = cached.env;
+			if (environment) scene.environment = cached.env;
+			env = cached.env;
+		} else {
+			// Kick off async load; leave existing scene background/environment untouched for now
+			const loader = new EXRLoader();
+			loader.load(
+				url,
+				(hdrTex) => {
+					// If user changed settings before load finished, ignore stale result
+					if (token !== hdriApplyToken) {
+						hdrTex.dispose?.();
+						return;
+					}
+
+					hdrTex.mapping = THREE.EquirectangularReflectionMapping;
+					hdrTex.colorSpace = THREE.LinearSRGBColorSpace;
+
+					const pmrem = new THREE.PMREMGenerator(renderer);
+					const envTex = pmrem.fromEquirectangular(hdrTex).texture;
+					pmrem.dispose();
+
+					cachedHdri.set(url, { hdr: hdrTex, env: envTex });
+
+					if (background) scene.background = envTex;
+					if (environment) scene.environment = envTex;
+				},
+				undefined,
+				() => {
+					// If HDRI fails to load, silently fall back to procedural in the next sync
+				},
+			);
+		}
 	}
 
 	// material envMapIntensity is applied per-material; keep a global hint for custom shaders

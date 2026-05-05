@@ -196,6 +196,13 @@ const FLOOR_Y = -1.2;
 // Load baked gallery environment (GLB with embedded materials/textures)
 const baseUrl = import.meta.env.BASE_URL || '/';
 async function loadBakedGallery() {
+	// Mobile devices may crash due to memory/GPU limits when loading large baked scenes.
+	// Keep the app usable by skipping the gallery on mobile/low-memory devices.
+	const deviceMem = typeof navigator.deviceMemory === 'number' ? navigator.deviceMemory : null;
+	if (quality?.isMobile || (deviceMem !== null && deviceMem <= 4)) {
+		console.warn('Skip gallery GLB on mobile/low-memory device.', { isMobile: quality?.isMobile, deviceMem });
+		return;
+	}
 	const glbUrl = `${baseUrl}models/VR_Gallery_Baked.glb`;
 	const gltf = await new Promise((resolve, reject) =>
 		new GLTFLoader().load(glbUrl, resolve, undefined, reject),
@@ -242,7 +249,11 @@ async function loadBakedGallery() {
 }
 
 // Fire-and-forget (fallback: scene still works without it)
-loadBakedGallery().catch((e) => console.error('Failed to load gallery GLB:', e));
+loadBakedGallery()
+	.then(() => {
+		// no-op
+	})
+	.catch((e) => console.error('Failed to load gallery GLB:', e));
 
 // Additive projection overlay on sculpture (dynamic textureUrl)
 const projectionLoader = new THREE.TextureLoader();

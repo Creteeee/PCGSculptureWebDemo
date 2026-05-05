@@ -504,6 +504,11 @@ body {
 	background: rgba(255, 255, 255, 0.04);
 }
 
+.chat__bubble--draft {
+	opacity: 0.8;
+	border-style: dashed;
+}
+
 .chat__msg--user .chat__bubble {
 	background: rgba(92, 107, 192, 0.18);
 	border-color: rgba(92, 107, 192, 0.3);

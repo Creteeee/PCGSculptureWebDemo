@@ -104,10 +104,20 @@ export function mountChatPanel(container, ctx = {}) {
 		log.scrollTop = log.scrollHeight;
 	}
 
+	function beginDraftUserBubble() {
+		const item = el('div', 'chat__msg chat__msg--user');
+		const bubble = el('div', 'chat__bubble chat__bubble--draft', '');
+		item.appendChild(bubble);
+		log.appendChild(item);
+		log.scrollTop = log.scrollHeight;
+		return { item, bubble };
+	}
+
 	let aborter = /** @type {AbortController | null} */ (null);
 	let mode = /** @type {'text'|'voice'} */ ('text');
 	let recognizing = false;
 	let recog = null;
+	let draft = /** @type {{ item: HTMLElement, bubble: HTMLElement } | null} */ (null);
 
 	function setMode(next) {
 		mode = next;
@@ -144,7 +154,19 @@ export function mountChatPanel(container, ctx = {}) {
 		const finalText = String(voicePreview.value || '').trim();
 		if (finalText) {
 			voicePreview.value = '';
+			// finalize draft bubble if present
+			if (draft) {
+				draft.bubble.textContent = finalText;
+				draft.bubble.classList.remove('chat__bubble--draft');
+				draft = null;
+			}
 			await onSend(finalText);
+		} else {
+			// remove empty draft bubble
+			if (draft) {
+				draft.item.remove();
+				draft = null;
+			}
 		}
 	}
 
@@ -160,13 +182,19 @@ export function mountChatPanel(container, ctx = {}) {
 		recognizing = true;
 		voiceBtn.textContent = '点击停止录音';
 		voiceBtn.classList.add('voiceBar__btn--on');
+		draft = beginDraftUserBubble();
 
 		r.onresult = (e) => {
 			let text = '';
 			for (let i = e.resultIndex; i < e.results.length; i++) {
 				text += e.results[i][0]?.transcript || '';
 			}
-			voicePreview.value = text.trim();
+			const t = text.trim();
+			voicePreview.value = t;
+			if (draft) {
+				draft.bubble.textContent = t || '（正在识别…）';
+				log.scrollTop = log.scrollHeight;
+			}
 		};
 		r.onerror = () => stopRecognition();
 		r.onend = () => {
@@ -192,7 +220,8 @@ export function mountChatPanel(container, ctx = {}) {
 			return;
 		}
 
-		appendMsg('user', text);
+		// In voice mode we already showed a draft bubble; avoid duplicating.
+		if (mode !== 'voice') appendMsg('user', text);
 		messages.push({ role: 'user', content: text });
 
 		if (aborter) aborter.abort();

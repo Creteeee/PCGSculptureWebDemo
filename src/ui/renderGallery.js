@@ -133,7 +133,6 @@ export function mountRenderGallery(container, { onClear } = {}) {
     if (!items.length) return;
 
     const endpoint = normalizeBaseUrl(CHAT_ENDPOINT_BASE);
-    const token = window.localStorage.getItem('pcg_chat_token') || '';
     if (!endpoint) {
       migrateBtn.textContent = '请先配置云函数地址';
       window.setTimeout(() => (migrateBtn.textContent = '迁移到火山(稳定链接)'), 1200);
@@ -145,7 +144,6 @@ export function mountRenderGallery(container, { onClear } = {}) {
     try {
       const urls = items.map((it) => it.url).filter(Boolean);
       const headers = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = `Bearer ${token}`;
 
       const resp = await fetch(`${endpoint}/migrate`, {
         method: 'POST',

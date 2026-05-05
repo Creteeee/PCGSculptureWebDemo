@@ -1,5 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createSceneCore } from './scene/createScene.js';
 import { createLightingRig, applyLightingParams } from './lighting/lightingRig.js';
 import { createSculptureMesh, rebuildSculptureVertices } from './geometry/sculptureGeometry.js';
@@ -190,8 +191,60 @@ scene.add(sculpture);
 const pbrMaterial = sculpture.material;
 const normalMaterial = createNormalPreviewMaterial(pbrMaterial);
 
-// Additive projection overlay on sculpture (dynamic textureUrl)
+const FLOOR_Y = -1.2;
+
+// Load baked gallery environment (GLB with embedded materials/textures)
 const baseUrl = import.meta.env.BASE_URL || '/';
+async function loadBakedGallery() {
+	const glbUrl = `${baseUrl}models/VR_Gallery_Baked.glb`;
+	const gltf = await new Promise((resolve, reject) =>
+		new GLTFLoader().load(glbUrl, resolve, undefined, reject),
+	);
+	const root = gltf?.scene || gltf?.scenes?.[0];
+	if (!root) throw new Error('GLB missing scene');
+	root.name = 'VR_Gallery_Baked';
+
+	root.traverse((obj) => {
+		if (!obj.isMesh) return;
+		obj.frustumCulled = false;
+		obj.castShadow = false;
+		obj.receiveShadow = true;
+
+		const mats = Array.isArray(obj.material) ? obj.material : [ obj.material ];
+		for (const m of mats) {
+			if (!m) continue;
+			if (m.map) m.map.anisotropy = 8;
+			if (m.normalMap) m.normalMap.anisotropy = 8;
+			if (m.roughnessMap) m.roughnessMap.anisotropy = 8;
+			if (m.metalnessMap) m.metalnessMap.anisotropy = 8;
+			if (m.aoMap) m.aoMap.anisotropy = 8;
+			m.needsUpdate = true;
+		}
+	});
+
+	// Make it 2x as requested
+	root.scale.multiplyScalar(2);
+
+	// Center to origin in XZ and sit on y=-1.2
+	const box2 = new THREE.Box3().setFromObject(root);
+	const center = new THREE.Vector3();
+	box2.getCenter(center);
+	root.position.x -= center.x;
+	root.position.z -= center.z;
+	const box3 = new THREE.Box3().setFromObject(root);
+	root.position.y += FLOOR_Y - box3.min.y;
+
+	// Put sculpture slightly above the gallery floor
+	controls.target.set(0, FLOOR_Y + 0.8, 0);
+	controls.update();
+
+	scene.add(root);
+}
+
+// Fire-and-forget (fallback: scene still works without it)
+loadBakedGallery().catch((e) => console.error('Failed to load gallery GLB:', e));
+
+// Additive projection overlay on sculpture (dynamic textureUrl)
 const projectionLoader = new THREE.TextureLoader();
 projectionLoader.setCrossOrigin('anonymous');
 let projectionTex = null;
@@ -239,9 +292,7 @@ function setProjectionTexture(urlLike) {
 			try {
 				const endpoint = normalizeBaseUrl(CHAT_ENDPOINT_BASE);
 				if (!endpoint) return;
-				const token = window.localStorage.getItem('pcg_chat_token') || '';
 				const headers = { 'Content-Type': 'application/json' };
-				if (token) headers.Authorization = `Bearer ${token}`;
 				const resp = await fetch(`${endpoint}/proxy-image`, {
 					method: 'POST',
 					headers,
@@ -287,7 +338,20 @@ projectionMesh.castShadow = false;
 projectionMesh.receiveShadow = false;
 projectionMesh.visible = false;
 projectionMesh.renderOrder = 10;
-scene.add(projectionMesh);
+// Keep projection perfectly aligned with sculpture transform
+projectionMesh.position.set(0, 0, 0);
+projectionMesh.rotation.set(0, 0, 0);
+projectionMesh.scale.set(1, 1, 1);
+sculpture.add(projectionMesh);
+
+function clampSculptureToFloor() {
+	// Ensure sculpture bottom touches floor (y = FLOOR_Y)
+	sculpture.geometry.computeBoundingBox();
+	const bb = sculpture.geometry.boundingBox;
+	if (!bb) return;
+	// bb is in sculpture local space; position.y shifts it in world.
+	sculpture.position.y = FLOOR_Y - bb.min.y;
+}
 
 // init texture once (can be replaced later)
 setProjectionTexture(state.projection?.textureUrl);
@@ -354,6 +418,7 @@ function ensureGrass() {
 
 function syncSculpture() {
 	rebuildSculptureVertices(sculpture, state.sculpture);
+	clampSculptureToFloor();
 	// keep grass seed loosely tied to sculpture seed when toggling
 	if (grass) {
 		scene.remove(grass.mesh);
@@ -447,6 +512,7 @@ syncLight();
 syncSkybox();
 ensureGrass();
 	syncProjection();
+clampSculptureToFloor();
 
 function animate() {
 	requestAnimationFrame(animate);

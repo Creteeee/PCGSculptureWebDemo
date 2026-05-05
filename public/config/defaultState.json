@@ -31,7 +31,7 @@
     "enabled": true,
     "background": true,
     "environment": true,
-    "hdriUrl": "textures/sepulchral_chapel_rotunda_2k.exr",
+    "hdriUrl": "",
     "size": 512,
     "topColor": "#72a5e3",
     "bottomColor": "#bcbbff"

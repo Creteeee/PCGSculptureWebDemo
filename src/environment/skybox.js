@@ -80,6 +80,7 @@ export function applySkybox(renderer, scene, options = {}) {
 		background = true,
 		environment = true,
 		intensity = 1,
+		// NOTE: skybox HDRI is intentionally disabled; keep only procedural gradient sky.
 		hdriUrl = '',
 		size = 512,
 		topColor = '#5aa7ff',
@@ -93,8 +94,9 @@ export function applySkybox(renderer, scene, options = {}) {
 		return { cube: null, env: null };
 	}
 
+	// Force procedural sky; ignore HDRI URL
 	const token = ++hdriApplyToken;
-	const url = resolveUrl(hdriUrl);
+	const url = '';
 
 	// Fallback (procedural) while HDRI is absent or loading
 	let cube = null;

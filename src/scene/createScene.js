@@ -32,16 +32,12 @@ export function createSceneCore(mountEl) {
 	controls.dampingFactor = 0.06;
 	controls.target.set(0, 0, 0);
 	controls.minDistance = 2;
-	controls.maxDistance = 40;
+	controls.maxDistance = 18;
 
 	const pmrem = new THREE.PMREMGenerator(renderer);
 	const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 	scene.environment = envTex;
 	pmrem.dispose();
-
-	const grid = new THREE.GridHelper(20, 40, 0x444444, 0x3a3a3a);
-	grid.position.y = -1.2;
-	scene.add(grid);
 
 	function onResize() {
 		const w = mountEl.clientWidth;

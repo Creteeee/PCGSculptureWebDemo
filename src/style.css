@@ -382,9 +382,63 @@ body {
 	gap: 8px;
 }
 
+.chat__headerRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
 .chat__title {
 	font-size: 0.9rem;
 	color: #d5dae3;
+}
+
+.chatMode {
+	display: inline-flex;
+	gap: 0;
+	background: #14171c;
+	border: 1px solid #2a303a;
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.chatMode__btn {
+	appearance: none;
+	border: none;
+	background: transparent;
+	color: #aeb6c3;
+	font: inherit;
+	padding: 6px 10px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.chatMode__btn[aria-selected="true"] {
+	background: rgba(92, 107, 192, 0.22);
+	color: #e8eaed;
+}
+
+.voiceBar {
+	display: none;
+	grid-template-columns: auto 1fr;
+	gap: 8px;
+	align-items: end;
+}
+
+.voiceBar__btn {
+	height: 42px;
+}
+
+.voiceBar__btn--on {
+	border-color: rgba(235, 87, 87, 0.6);
+	background: rgba(235, 87, 87, 0.14);
+}
+
+.voiceBar__preview {
+	min-height: 42px;
+	max-height: 120px;
+	resize: none;
 }
 
 .chat__keyRow {

@@ -1,15 +1,6 @@
-const LS_TOKEN = 'pcg_chat_token';
 const IMAGEX_TEMPLATE = 'tplv-97hsy4j2xz-pcg存图';
 
 import { CHAT_ENDPOINT_BASE, normalizeBaseUrl } from '../config/chatEndpoint.js';
-
-function getToken() {
-	return window.localStorage.getItem(LS_TOKEN) || '';
-}
-
-function setToken(v) {
-	window.localStorage.setItem(LS_TOKEN, v || '');
-}
 
 function el(tag, className, text) {
 	const node = document.createElement(tag);
@@ -23,11 +14,10 @@ function formatError(err) {
 	return String(err);
 }
 
-async function postJson(url, body, { token, signal } = {}) {
+async function postJson(url, body, { signal } = {}) {
 	const headers = {
 		'Content-Type': 'application/json',
 	};
-	if (token) headers.Authorization = `Bearer ${token}`;
 
 	const res = await fetch(url, {
 		method: 'POST',
@@ -60,21 +50,33 @@ export function mountChatPanel(container, ctx = {}) {
 	const root = el('div', 'chat');
 
 	const header = el('div', 'chat__header');
-	header.appendChild(el('div', 'chat__title', '对话模式'));
+	const headerRow = el('div', 'chat__headerRow');
+	headerRow.appendChild(el('div', 'chat__title', '对话模式'));
 
-	const tokenRow = el('div', 'chat__keyRow');
-	const tokenInput = /** @type {HTMLInputElement} */ (el('input', 'chat__keyInput'));
-	tokenInput.type = 'password';
-	tokenInput.placeholder = '可选：访问 token（建议配置，防止他人刷你的云函数）';
-	tokenInput.value = getToken();
-	const saveTokenBtn = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn', '保存 token'));
-	saveTokenBtn.type = 'button';
-	saveTokenBtn.addEventListener('click', () => setToken(tokenInput.value.trim()));
-	tokenRow.appendChild(tokenInput);
-	tokenRow.appendChild(saveTokenBtn);
+	const switcher = el('div', 'chatMode');
+	const btnText = /** @type {HTMLButtonElement} */ (el('button', 'chatMode__btn', '打字模式'));
+	const btnVoice = /** @type {HTMLButtonElement} */ (el('button', 'chatMode__btn', '语音模式'));
+	btnText.type = 'button';
+	btnVoice.type = 'button';
+	btnText.setAttribute('aria-selected', 'true');
+	btnVoice.setAttribute('aria-selected', 'false');
+	switcher.appendChild(btnText);
+	switcher.appendChild(btnVoice);
+	headerRow.appendChild(switcher);
 
-	header.appendChild(tokenRow);
+	header.appendChild(headerRow);
 	root.appendChild(header);
+
+	const voiceBar = el('div', 'voiceBar');
+	const voiceBtn = /** @type {HTMLButtonElement} */ (el('button', 'chat__btn voiceBar__btn', '点击开始录音'));
+	voiceBtn.type = 'button';
+	const voicePreview = /** @type {HTMLTextAreaElement} */ (el('textarea', 'chat__input voiceBar__preview'));
+	voicePreview.placeholder = '语音识别文本会出现在这里（停止录音后将自动发送）';
+	voicePreview.rows = 2;
+	voicePreview.readOnly = true;
+	voiceBar.appendChild(voiceBtn);
+	voiceBar.appendChild(voicePreview);
+	root.appendChild(voiceBar);
 
 	const log = el('div', 'chat__log');
 	root.appendChild(log);
@@ -103,6 +105,85 @@ export function mountChatPanel(container, ctx = {}) {
 	}
 
 	let aborter = /** @type {AbortController | null} */ (null);
+	let mode = /** @type {'text'|'voice'} */ ('text');
+	let recognizing = false;
+	let recog = null;
+
+	function setMode(next) {
+		mode = next;
+		btnText.setAttribute('aria-selected', String(mode === 'text'));
+		btnVoice.setAttribute('aria-selected', String(mode === 'voice'));
+		voiceBar.style.display = mode === 'voice' ? 'grid' : 'none';
+		composer.style.display = mode === 'text' ? 'grid' : 'none';
+	}
+
+	btnText.addEventListener('click', () => setMode('text'));
+	btnVoice.addEventListener('click', () => setMode('voice'));
+	setMode('text');
+
+	function getSpeechRecognition() {
+		const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+		if (!SR) return null;
+		const r = new SR();
+		r.lang = 'zh-CN';
+		r.interimResults = true;
+		r.continuous = true;
+		return r;
+	}
+
+	async function stopRecognition() {
+		try {
+			recog?.stop?.();
+		} catch {
+			// ignore
+		}
+		recognizing = false;
+		voiceBtn.textContent = '点击开始录音';
+		voiceBtn.classList.remove('voiceBar__btn--on');
+
+		const finalText = String(voicePreview.value || '').trim();
+		if (finalText) {
+			voicePreview.value = '';
+			await onSend(finalText);
+		}
+	}
+
+	async function startRecognition() {
+		if (recognizing) return;
+		const r = getSpeechRecognition();
+		if (!r) {
+			appendMsg('assistant', '当前浏览器不支持语音识别（SpeechRecognition）。建议使用最新版 Chrome/Edge。');
+			return;
+		}
+		recog = r;
+		voicePreview.value = '';
+		recognizing = true;
+		voiceBtn.textContent = '点击停止录音';
+		voiceBtn.classList.add('voiceBar__btn--on');
+
+		r.onresult = (e) => {
+			let text = '';
+			for (let i = e.resultIndex; i < e.results.length; i++) {
+				text += e.results[i][0]?.transcript || '';
+			}
+			voicePreview.value = text.trim();
+		};
+		r.onerror = () => stopRecognition();
+		r.onend = () => {
+			// Some browsers end automatically; treat as stop.
+			if (recognizing) stopRecognition();
+		};
+		try {
+			r.start();
+		} catch {
+			await stopRecognition();
+		}
+	}
+
+	voiceBtn.addEventListener('click', async () => {
+		if (!recognizing) await startRecognition();
+		else await stopRecognition();
+	});
 
 	async function onSend(text) {
 		const base = normalizeBaseUrl(CHAT_ENDPOINT_BASE);
@@ -110,7 +191,6 @@ export function mountChatPanel(container, ctx = {}) {
 			appendMsg('assistant', '云函数地址未配置。');
 			return;
 		}
-		const token = getToken();
 
 		appendMsg('user', text);
 		messages.push({ role: 'user', content: text });
@@ -130,7 +210,7 @@ export function mountChatPanel(container, ctx = {}) {
 					systemPrompt,
 					state,
 				},
-				{ token, signal: aborter.signal },
+				{ signal: aborter.signal },
 			);
 
 			const type = data?.type;
@@ -155,7 +235,7 @@ export function mountChatPanel(container, ctx = {}) {
 							render_request: data.render_request,
 							imagex_template: IMAGEX_TEMPLATE,
 						},
-						{ token, signal: aborter.signal },
+						{ signal: aborter.signal },
 					);
 					const url = texResp?.url || texResp?.data?.url;
 					if (url) {
@@ -176,7 +256,7 @@ export function mountChatPanel(container, ctx = {}) {
 							viewport_image_base64: viewportBase64,
 							imagex_template: IMAGEX_TEMPLATE,
 						},
-						{ token, signal: aborter.signal },
+						{ signal: aborter.signal },
 					);
 
 					const url = imgResp?.url || imgResp?.data?.url;
@@ -223,6 +303,11 @@ export function mountChatPanel(container, ctx = {}) {
 	return {
 		dispose() {
 			if (aborter) aborter.abort();
+			try {
+				recog?.stop?.();
+			} catch {
+				// ignore
+			}
 		},
 	};
 }

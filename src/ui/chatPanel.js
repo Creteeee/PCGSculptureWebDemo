@@ -115,9 +115,12 @@ export function mountChatPanel(container, ctx = {}) {
 
 	let aborter = /** @type {AbortController | null} */ (null);
 	let mode = /** @type {'text'|'voice'} */ ('text');
+	let recordingActive = false; // user toggled on
 	let recognizing = false;
 	let recog = null;
 	let draft = /** @type {{ item: HTMLElement, bubble: HTMLElement } | null} */ (null);
+	let lastSpokenDraft = '';
+	let manualStopping = false;
 
 	function setMode(next) {
 		mode = next;
@@ -138,15 +141,18 @@ export function mountChatPanel(container, ctx = {}) {
 		r.lang = 'zh-CN';
 		r.interimResults = true;
 		r.continuous = true;
+		r.maxAlternatives = 1;
 		return r;
 	}
 
 	async function stopRecognition() {
+		manualStopping = true;
 		try {
 			recog?.stop?.();
 		} catch {
 			// ignore
 		}
+		recordingActive = false;
 		recognizing = false;
 		voiceBtn.textContent = '点击开始录音';
 		voiceBtn.classList.remove('voiceBar__btn--on');
@@ -168,12 +174,51 @@ export function mountChatPanel(container, ctx = {}) {
 				draft = null;
 			}
 		}
+		recog = null;
+		lastSpokenDraft = '';
+		manualStopping = false;
 	}
 
 	async function startRecognition() {
-		if (recognizing) return;
+		if (recordingActive || recognizing) return;
+		recordingActive = true;
+		manualStopping = false;
+		// Pre-warm mic permission/device (Edge reliability)
+		try {
+			if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+				throw Object.assign(new Error('Not secure context'), { name: 'SecurityError' });
+			}
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			for (const t of stream.getTracks()) t.stop();
+		} catch {
+			recordingActive = false;
+			const err = arguments[0];
+			const name = err?.name || '';
+			const msg = err?.message || '';
+			let hint = '无法获取麦克风。';
+			if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+				hint =
+					'麦克风权限被拒绝。请在浏览器地址栏左侧站点设置中允许麦克风，并刷新页面后再试。';
+			} else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+				hint = '未检测到麦克风设备。请检查系统是否有可用输入设备。';
+			} else if (name === 'NotReadableError' || name === 'TrackStartError') {
+				hint =
+					'麦克风被占用或设备忙。请关闭其它正在使用麦克风的标签页/软件（如微信、QQ、录屏、会议软件）后再试。';
+			} else if (name === 'SecurityError') {
+				hint = '当前页面不是安全环境（需要 HTTPS 或 localhost）。';
+			}
+			try {
+				// eslint-disable-next-line no-console
+				console.error('getUserMedia failed:', err);
+			} catch {
+				// ignore
+			}
+			appendMsg('assistant', `${hint}${name || msg ? `\n（${name}${msg ? `: ${msg}` : ''}）` : ''}`);
+			return;
+		}
 		const r = getSpeechRecognition();
 		if (!r) {
+			recordingActive = false;
 			appendMsg('assistant', '当前浏览器不支持语音识别（SpeechRecognition）。建议使用最新版 Chrome/Edge。');
 			return;
 		}
@@ -183,28 +228,61 @@ export function mountChatPanel(container, ctx = {}) {
 		voiceBtn.textContent = '点击停止录音';
 		voiceBtn.classList.add('voiceBar__btn--on');
 		draft = beginDraftUserBubble();
+		lastSpokenDraft = '';
 
 		r.onresult = (e) => {
-			let text = '';
+			let finalized = '';
+			let interim = '';
 			for (let i = e.resultIndex; i < e.results.length; i++) {
-				text += e.results[i][0]?.transcript || '';
+				const res = e.results[i];
+				const s = res?.[0]?.transcript || '';
+				if (res?.isFinal) finalized += s;
+				else interim += s;
 			}
-			const t = text.trim();
-			voicePreview.value = t;
+			finalized = finalized.trim();
+			let base = `${lastSpokenDraft}`.trimEnd();
+			if (finalized) {
+				base = base ? `${base} ${finalized}` : finalized;
+				lastSpokenDraft = `${base}`;
+			}
+			const bubbleText = `${base} ${interim}`.trim();
+			voicePreview.value = bubbleText;
 			if (draft) {
-				draft.bubble.textContent = t || '（正在识别…）';
+				draft.bubble.textContent = bubbleText || '（正在识别…）';
 				log.scrollTop = log.scrollHeight;
 			}
 		};
-		r.onerror = () => stopRecognition();
+		r.onerror = () => {
+			// Do not auto-submit; just stop the session and let user retry.
+			recognizing = false;
+			recog = null;
+			voiceBtn.textContent = '点击开始录音';
+			voiceBtn.classList.remove('voiceBar__btn--on');
+			recordingActive = false;
+			appendMsg('assistant', '语音识别中断，请再点一次开始录音。');
+			if (draft && !String(voicePreview.value || '').trim()) {
+				draft.item.remove();
+				draft = null;
+			}
+		};
 		r.onend = () => {
-			// Some browsers end automatically; treat as stop.
-			if (recognizing) stopRecognition();
+			// Edge may end automatically; do NOT auto-submit.
+			recognizing = false;
+			recog = null;
+			if (manualStopping) return;
+			voiceBtn.textContent = '点击开始录音';
+			voiceBtn.classList.remove('voiceBar__btn--on');
+			recordingActive = false;
 		};
 		try {
 			r.start();
 		} catch {
-			await stopRecognition();
+			recordingActive = false;
+			recognizing = false;
+			recog = null;
+			voiceBtn.textContent = '点击开始录音';
+			voiceBtn.classList.remove('voiceBar__btn--on');
+			appendMsg('assistant', '语音识别启动失败，请重试。');
 		}
 	}
 
